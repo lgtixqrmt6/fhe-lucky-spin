@@ -2,6 +2,17 @@
 
 A privacy-preserving lucky spin game built with Fully Homomorphic Encryption (FHE) technology, powered by Zama's fhEVM protocol. This decentralized application ensures complete fairness and privacy for all players while maintaining full transparency on the blockchain.
 
+## 🎬 Demo Video
+
+> 📹 **[Click here to download the demo video](./docs/demo-test.mp4)** - See the FHE Lucky Spin in action!
+
+The demo video showcases:
+- 🔐 **Privacy-preserving gameplay** with FHE encryption
+- 🎰 **Live spinning** and result animation
+- 🎉 **Success modal** displaying prize results
+- 💰 **On-chain transaction** confirmation
+- ✨ **Complete user flow** from wallet connection to prize claiming
+
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)](https://soliditylang.org/)
 [![Hardhat](https://img.shields.io/badge/Hardhat-2.22.0-yellow)](https://hardhat.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB)](https://reactjs.org/)
