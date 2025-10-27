@@ -1,0 +1,166 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+import {FHE, euint8, externalEuint8} from "@fhevm/solidity/lib/FHE.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+/**
+ * @title FHELuckySpinSimplified
+ * @notice Simplified lucky spin - frontend chooses prize, contract just records
+ */
+contract FHELuckySpinSimplified is SepoliaConfig, Ownable, ReentrancyGuard {
+
+    // Constants
+    uint256 public constant SPIN_COST = 0.01 ether;
+    uint256 public constant MAX_DAILY_SPINS = 10;
+
+    // Prize definitions (all points, no ETH)
+    struct Prize {
+        string name;
+        uint256 points;
+        uint8 probability;
+    }
+
+    Prize[] public prizes;
+
+    // User data
+    mapping(address => uint256) public userPoints;
+    mapping(address => uint256) public userSpinCount;
+    mapping(address => uint256) public dailySpinCount;
+    mapping(address => uint256) public lastSpinDate;
+
+    // Events
+    event SpinExecuted(address indexed user, uint256 spinId, uint256 timestamp);
+    event PrizeClaimed(address indexed user, uint8 prizeIndex, uint256 points);
+
+    // Errors
+    error InsufficientPayment();
+    error DailyLimitExceeded();
+
+    constructor() Ownable(msg.sender) {
+        // Initialize 5 prizes - ALL POINTS
+        prizes.push(Prize("Thank You", 0, 40));          // 40% - 0 points
+        prizes.push(Prize("100 Points", 100, 30));       // 30% - 100 points
+        prizes.push(Prize("500 Points", 500, 20));       // 20% - 500 points
+        prizes.push(Prize("1000 Points", 1000, 8));      // 8% - 1000 points
+        prizes.push(Prize("5000 Points", 5000, 2));      // 2% - 5000 points
+    }
+
+    /**
+     * @notice Execute a spin
+     * @param encryptedPrizeIndex Encrypted prize index (0-4) chosen by frontend
+     * @param proof Proof for encrypted prize index
+     */
+    function spin(externalEuint8 encryptedPrizeIndex, bytes calldata proof)
+        external
+        payable
+        nonReentrant
+    {
+        // Check payment
+        if (msg.value != SPIN_COST) {
+            revert InsufficientPayment();
+        }
+
+        // Check daily limit
+        uint256 today = block.timestamp / 1 days;
+        if (lastSpinDate[msg.sender] != today) {
+            lastSpinDate[msg.sender] = today;
+            dailySpinCount[msg.sender] = 0;
+        }
+
+        if (dailySpinCount[msg.sender] >= MAX_DAILY_SPINS) {
+            revert DailyLimitExceeded();
+        }
+
+        // Convert encrypted prize index
+        euint8 prizeIndexEnc = FHE.fromExternal(encryptedPrizeIndex, proof);
+
+        // Allow user to decrypt (for frontend display)
+        FHE.allow(prizeIndexEnc, msg.sender);
+
+        // Increment counters
+        dailySpinCount[msg.sender]++;
+        userSpinCount[msg.sender]++;
+
+        emit SpinExecuted(msg.sender, userSpinCount[msg.sender], block.timestamp);
+    }
+
+    /**
+     * @notice Claim prize after decrypting on frontend
+     * @param prizeIndex Decrypted prize index (0-4)
+     */
+    function claimPrize(uint8 prizeIndex) external {
+        require(prizeIndex < prizes.length, "Invalid prize index");
+
+        Prize memory prize = prizes[prizeIndex];
+
+        // Award points
+        if (prize.points > 0) {
+            userPoints[msg.sender] += prize.points;
+        }
+
+        emit PrizeClaimed(msg.sender, prizeIndex, prize.points);
+    }
+
+    /**
+     * @notice Get user's remaining spins today
+     */
+    function getRemainingSpins(address user) external view returns (uint256) {
+        uint256 today = block.timestamp / 1 days;
+        if (lastSpinDate[user] != today) {
+            return MAX_DAILY_SPINS;
+        }
+        return MAX_DAILY_SPINS - dailySpinCount[user];
+    }
+
+    /**
+     * @notice Get user stats
+     */
+    function getUserStats(address user) external view returns (
+        uint256 points,
+        uint256 totalSpins,
+        uint256 remainingSpins
+    ) {
+        uint256 today = block.timestamp / 1 days;
+        uint256 dailyUsed = (lastSpinDate[user] == today) ? dailySpinCount[user] : 0;
+
+        return (
+            userPoints[user],
+            userSpinCount[user],
+            MAX_DAILY_SPINS - dailyUsed
+        );
+    }
+
+    /**
+     * @notice Get prize info
+     */
+    function getPrize(uint8 index) external view returns (Prize memory) {
+        require(index < prizes.length, "Invalid prize index");
+        return prizes[index];
+    }
+
+    /**
+     * @notice Get prize count
+     */
+    function getPrizeCount() external view returns (uint256) {
+        return prizes.length;
+    }
+
+    /**
+     * @notice Withdraw accumulated ETH (owner only)
+     */
+    function withdraw() external onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No balance");
+        payable(owner()).transfer(balance);
+    }
+
+    /**
+     * @notice Get contract balance
+     */
+    function getBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+}

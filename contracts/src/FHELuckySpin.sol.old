@@ -1,0 +1,384 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+import {FHE, euint8, euint32, externalEuint8, externalEuint32} from "@fhevm/solidity/lib/FHE.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+/**
+ * @title FHELuckySpin
+ * @dev Privacy-preserving lucky spin game using FHE technology
+ * @notice Uses fully homomorphic encryption to protect user spin results, ensuring game fairness and privacy
+ */
+contract FHELuckySpin is SepoliaConfig, Ownable, ReentrancyGuard {
+    
+    // Prize types
+    enum PrizeType {
+        POINTS,
+        ETH
+    }
+
+    // Prize structure for the spin wheel
+    struct Prize {
+        string name;        // Prize name
+        uint256 value;      // Prize value (points or wei)
+        PrizeType prizeType; // Type of prize
+        uint8 probability;  // Winning probability (0-100)
+        bool active;        // Whether the prize is active
+    }
+    
+    // User spin record structure
+    struct SpinRecord {
+        uint256 timestamp;  // Spin timestamp
+        euint8 result;      // Encrypted spin result
+        bool claimed;       // Whether prize has been claimed
+        uint256 prizeValue; // Prize value (stored after decryption)
+        PrizeType prizeType; // Type of prize won
+        string prizeName;   // Name of prize won
+    }
+    
+    // State variables
+    Prize[] public prizes;                    // Prize list
+    mapping(address => SpinRecord[]) public userSpins; // User spin records
+    mapping(address => uint256) public dailySpinCount; // Daily spin count
+    mapping(address => uint256) public lastSpinDate;   // Last spin date
+    mapping(address => uint256) public userPoints;    // User points balance
+    mapping(address => uint256) public totalEthWon;   // Total ETH won by user
+    
+    // Configuration parameters
+    uint256 public constant MAX_DAILY_SPINS = 10;      // Maximum daily spins
+    uint256 public constant SPIN_COST = 0.05 ether;   // Spin cost (0.05 ETH)
+    uint256 public totalProbability = 0;               // Total probability
+    uint256 public totalPointsDistributed = 0;        // Total points distributed
+    uint256 public totalEthDistributed = 0;           // Total ETH distributed
+    
+    // Events
+    event PrizeAdded(uint256 indexed prizeId, string name, uint256 value, PrizeType prizeType, uint8 probability);
+    event PrizeUpdated(uint256 indexed prizeId, string name, uint256 value, PrizeType prizeType, uint8 probability);
+    event SpinExecuted(address indexed user, uint256 spinId, uint256 timestamp, uint256 payment);
+    event PrizeClaimed(address indexed user, uint256 spinId, string prizeName, uint256 prizeValue, PrizeType prizeType);
+    event PointsAwarded(address indexed user, uint256 points);
+    event EthPrizeAwarded(address indexed user, uint256 amount);
+    event FundsWithdrawn(address indexed owner, uint256 amount);
+    
+    // Error definitions
+    error InsufficientPayment();
+    error DailyLimitExceeded();
+    error InvalidPrizeId();
+    error PrizeNotActive();
+    error AlreadyClaimed();
+    error InvalidProbability();
+    error InsufficientContractBalance();
+    
+    constructor() Ownable(msg.sender) {
+        // Initialize prizes with points and ETH rewards
+        _addPrize("Thank You", 0, PrizeType.POINTS, 40);       // 40% chance - no reward
+        _addPrize("100 Points", 100, PrizeType.POINTS, 30);    // 30% chance - 100 points
+        _addPrize("500 Points", 500, PrizeType.POINTS, 20);    // 20% chance - 500 points
+        _addPrize("0.1 ETH", 0.1 ether, PrizeType.ETH, 8);     // 8% chance - 0.1 ETH
+        _addPrize("0.5 ETH", 0.5 ether, PrizeType.ETH, 2);     // 2% chance - 0.5 ETH
+    }
+    
+    /**
+     * @dev Execute spin game
+     * @param encryptedRandom Encrypted random number
+     * @param proof Random number proof
+     */
+    function spin(externalEuint8 encryptedRandom, bytes calldata proof) 
+        external 
+        payable 
+        nonReentrant 
+    {
+        // Check payment (must be exactly 0.05 ETH)
+        if (msg.value != SPIN_COST) {
+            revert InsufficientPayment();
+        }
+        
+        // Check daily spin limit
+        uint256 today = block.timestamp / 1 days;
+        if (lastSpinDate[msg.sender] == today) {
+            if (dailySpinCount[msg.sender] >= MAX_DAILY_SPINS) {
+                revert DailyLimitExceeded();
+            }
+        } else {
+            // New day, reset count
+            dailySpinCount[msg.sender] = 0;
+            lastSpinDate[msg.sender] = today;
+        }
+        
+        // Convert external encrypted data
+        euint8 randomValue = FHE.fromExternal(encryptedRandom, proof);
+        
+        // Calculate spin result (using FHE operations)
+        euint8 result = _calculateSpinResult(randomValue);
+        
+        // Record spin result
+        uint256 spinId = userSpins[msg.sender].length;
+        userSpins[msg.sender].push(SpinRecord({
+            timestamp: block.timestamp,
+            result: result,
+            claimed: false,
+            prizeValue: 0,
+            prizeType: PrizeType.POINTS,
+            prizeName: ""
+        }));
+        
+        // Update daily spin count
+        dailySpinCount[msg.sender]++;
+        
+        // Allow contract to access encrypted result
+        FHE.allowThis(result);
+        
+        emit SpinExecuted(msg.sender, spinId, block.timestamp, msg.value);
+    }
+    
+    /**
+     * @dev Claim prize
+     * @param spinId Spin record ID
+     * @param decryptedResult Decrypted spin result
+     */
+    function claimPrize(uint256 spinId, uint8 decryptedResult) external nonReentrant {
+        SpinRecord storage record = userSpins[msg.sender][spinId];
+        
+        if (record.claimed) {
+            revert AlreadyClaimed();
+        }
+        
+        // Verify decryption result
+        if (!FHE.eq(record.result, decryptedResult)) {
+            revert("Invalid decryption");
+        }
+        
+        // Determine prize based on result
+        Prize memory prize = prizes[decryptedResult];
+        record.prizeValue = prize.value;
+        record.prizeType = prize.prizeType;
+        record.prizeName = prize.name;
+        record.claimed = true;
+
+        // Distribute prize based on type
+        if (prize.value > 0) {
+            if (prize.prizeType == PrizeType.POINTS) {
+                // Award points
+                userPoints[msg.sender] += prize.value;
+                totalPointsDistributed += prize.value;
+                emit PointsAwarded(msg.sender, prize.value);
+            } else if (prize.prizeType == PrizeType.ETH) {
+                // Award ETH
+                if (address(this).balance < prize.value) {
+                    revert InsufficientContractBalance();
+                }
+                payable(msg.sender).transfer(prize.value);
+                totalEthWon[msg.sender] += prize.value;
+                totalEthDistributed += prize.value;
+                emit EthPrizeAwarded(msg.sender, prize.value);
+            }
+        }
+
+        emit PrizeClaimed(msg.sender, spinId, prize.name, prize.value, prize.prizeType);
+    }
+    
+    /**
+     * @dev Add prize (admin only)
+     */
+    function addPrize(string calldata name, uint256 value, PrizeType prizeType, uint8 probability) external onlyOwner {
+        _addPrize(name, value, prizeType, probability);
+    }
+    
+    /**
+     * @dev Update prize (admin only)
+     */
+    function updatePrize(uint256 prizeId, string calldata name, uint256 value, PrizeType prizeType, uint8 probability) external onlyOwner {
+        if (prizeId >= prizes.length) {
+            revert InvalidPrizeId();
+        }
+
+        // Recalculate total probability
+        totalProbability = totalProbability - prizes[prizeId].probability + probability;
+
+        prizes[prizeId] = Prize({
+            name: name,
+            value: value,
+            prizeType: prizeType,
+            probability: probability,
+            active: true
+        });
+
+        emit PrizeUpdated(prizeId, name, value, prizeType, probability);
+    }
+    
+    /**
+     * @dev Set prize active status (admin only)
+     */
+    function setPrizeActive(uint256 prizeId, bool active) external onlyOwner {
+        if (prizeId >= prizes.length) {
+            revert InvalidPrizeId();
+        }
+        prizes[prizeId].active = active;
+    }
+    
+    /**
+     * @dev Withdraw contract funds (admin only)
+     */
+    function withdrawFunds() external onlyOwner {
+        uint256 balance = address(this).balance;
+        if (balance > 0) {
+            payable(owner()).transfer(balance);
+            emit FundsWithdrawn(owner(), balance);
+        }
+    }
+    
+    /**
+     * @dev Get user spin record count
+     */
+    function getUserSpinCount(address user) external view returns (uint256) {
+        return userSpins[user].length;
+    }
+    
+    /**
+     * @dev Get user remaining spins for today
+     */
+    function getRemainingSpins(address user) external view returns (uint256) {
+        uint256 today = block.timestamp / 1 days;
+        if (lastSpinDate[user] == today) {
+            return MAX_DAILY_SPINS - dailySpinCount[user];
+        }
+        return MAX_DAILY_SPINS;
+    }
+    
+    /**
+     * @dev Get prize count
+     */
+    function getPrizeCount() external view returns (uint256) {
+        return prizes.length;
+    }
+    
+    /**
+     * @dev Get contract balance
+     */
+    function getContractBalance() external view returns (uint256) {
+        return address(this).balance;
+    }
+
+    /**
+     * @dev Get user points balance
+     */
+    function getUserPoints(address user) external view returns (uint256) {
+        return userPoints[user];
+    }
+
+    /**
+     * @dev Get user's total ETH won
+     */
+    function getUserTotalEthWon(address user) external view returns (uint256) {
+        return totalEthWon[user];
+    }
+
+    /**
+     * @dev Get user spin history with prize details
+     */
+    function getUserSpinHistory(address user) external view returns (
+        uint256[] memory timestamps,
+        string[] memory prizeNames,
+        uint256[] memory prizeValues,
+        bool[] memory claimed
+    ) {
+        uint256 count = userSpins[user].length;
+        timestamps = new uint256[](count);
+        prizeNames = new string[](count);
+        prizeValues = new uint256[](count);
+        claimed = new bool[](count);
+
+        for (uint256 i = 0; i < count; i++) {
+            SpinRecord memory record = userSpins[user][i];
+            timestamps[i] = record.timestamp;
+            prizeNames[i] = record.prizeName;
+            prizeValues[i] = record.prizeValue;
+            claimed[i] = record.claimed;
+        }
+
+        return (timestamps, prizeNames, prizeValues, claimed);
+    }
+
+    /**
+     * @dev Get global statistics
+     */
+    function getGlobalStats() external view returns (
+        uint256 totalPointsGiven,
+        uint256 totalEthGiven,
+        uint256 contractBalance,
+        uint256 spinPrice
+    ) {
+        return (
+            totalPointsDistributed,
+            totalEthDistributed,
+            address(this).balance,
+            SPIN_COST
+        );
+    }
+    
+    /**
+     * @dev Internal function: Add prize
+     */
+    function _addPrize(string memory name, uint256 value, PrizeType prizeType, uint8 probability) internal {
+        if (probability > 100) {
+            revert InvalidProbability();
+        }
+
+        totalProbability += probability;
+        if (totalProbability > 100) {
+            revert InvalidProbability();
+        }
+
+        prizes.push(Prize({
+            name: name,
+            value: value,
+            prizeType: prizeType,
+            probability: probability,
+            active: true
+        }));
+
+        emit PrizeAdded(prizes.length - 1, name, value, prizeType, probability);
+    }
+    
+    /**
+     * @dev Internal function: Calculate spin result (FHE operations)
+     */
+    function _calculateSpinResult(euint8 randomValue) internal view returns (euint8) {
+        // Map random number to 0-99 range
+        euint8 normalizedRandom = FHE.rem(randomValue, 100);
+        
+        // Calculate result based on probability distribution
+        euint8 result = 0;
+        uint8 cumulativeProbability = 0;
+        
+        for (uint256 i = 0; i < prizes.length; i++) {
+            if (prizes[i].active) {
+                cumulativeProbability += prizes[i].probability;
+                euint8 threshold = cumulativeProbability;
+                
+                // If random number is less than or equal to threshold, win prize
+                if (FHE.le(normalizedRandom, threshold)) {
+                    result = uint8(i);
+                    break;
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * @dev Internal function: Get prize value based on result
+     */
+    function _getPrizeValue(uint8 result) internal view returns (uint256) {
+        if (result >= prizes.length || !prizes[result].active) {
+            return 0;
+        }
+        return prizes[result].value;
+    }
+    
+    // Receive ether
+    receive() external payable {}
+}
