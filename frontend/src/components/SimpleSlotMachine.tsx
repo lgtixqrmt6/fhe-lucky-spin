@@ -1,55 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { useSimpleFHELuckySpin, Prize } from '@/hooks/useSimpleFHELuckySpin';
+import { useFHELuckySpinSimplified } from '@/hooks/useFHELuckySpinSimplified';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Gift, Trophy, RotateCcw, History } from 'lucide-react';
 import { useAccount } from 'wagmi';
+import { PRIZE_INFO, CONTRACT_ADDRESSES } from '@/config/contracts';
 
 const PRIZE_EMOJIS = ['🙏', '💎', '⭐', '💰', '🎁'];
+
+interface Prize {
+  name: string;
+  value: string;
+  probability: number;
+}
 
 export function SimpleSlotMachine() {
   const { address } = useAccount();
   const {
-    contractAddress,
     remainingSpins,
     userSpinCount,
-    contractBalance,
-    prizeCount,
-    getAllPrizes,
+    userPoints,
     spin,
     selectedPrize,
     isEncrypting,
     isWritePending,
     isConfirming,
     isConfirmed,
-    txHash,
-    refetchAll,
-  } = useSimpleFHELuckySpin();
+    hash: txHash,
+  } = useFHELuckySpinSimplified();
 
-  const [prizes, setPrizes] = useState<Prize[]>([]);
+  // Use prizes from config
+  const prizes: Prize[] = PRIZE_INFO.map(p => ({
+    name: p.name,
+    value: p.value,
+    probability: p.probability,
+  }));
+
   const [isSpinning, setIsSpinning] = useState(false);
   const [lastResult, setLastResult] = useState<{ prize: Prize; index: number } | null>(null);
   const [reels, setReels] = useState<number[]>([0, 0, 0]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [winHistory, setWinHistory] = useState<Array<{ prize: Prize; index: number; timestamp: number }>>([]);
-
-  // Load prizes
-  useEffect(() => {
-    const loadPrizes = async () => {
-      try {
-        const allPrizes = await getAllPrizes();
-        setPrizes(allPrizes);
-      } catch (error) {
-        console.error('Failed to load prizes:', error);
-      }
-    };
-
-    if (prizeCount > 0) {
-      loadPrizes();
-    }
-  }, [prizeCount, getAllPrizes]);
 
   // Reel animation
   const animateReels = () => {
@@ -88,15 +81,16 @@ export function SimpleSlotMachine() {
       setIsSpinning(true);
       animateReels();
 
-      const result = await spin();
+      await spin();
 
-      if (result.selectedPrize !== null && prizes[result.selectedPrize]) {
+      // Use selectedPrize from hook
+      if (selectedPrize !== null && prizes[selectedPrize]) {
         // Set final result
         setTimeout(() => {
-          setReels([result.selectedPrize, result.selectedPrize, result.selectedPrize]);
+          setReels([selectedPrize, selectedPrize, selectedPrize]);
           const resultData = {
-            prize: prizes[result.selectedPrize],
-            index: result.selectedPrize,
+            prize: prizes[selectedPrize],
+            index: selectedPrize,
             timestamp: Date.now(),
           };
           setLastResult(resultData);
@@ -124,7 +118,7 @@ export function SimpleSlotMachine() {
         </h1>
         <p className="text-gray-600 mt-2">Privacy-Preserving Blockchain Game</p>
         <p className="text-sm text-gray-500 mt-1">
-          Contract: {contractAddress.slice(0, 6)}...{contractAddress.slice(-4)}
+          Contract: {CONTRACT_ADDRESSES.FHELuckySpinV2.slice(0, 6)}...{CONTRACT_ADDRESSES.FHELuckySpinV2.slice(-4)}
         </p>
       </div>
 
@@ -152,11 +146,11 @@ export function SimpleSlotMachine() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Contract Balance</CardTitle>
+            <CardTitle className="text-sm font-medium">Points</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{contractBalance} ETH</div>
-            <p className="text-xs text-gray-500">Prize pool balance</p>
+            <div className="text-2xl font-bold text-purple-600">{userPoints}</div>
+            <p className="text-xs text-gray-500">Your points balance</p>
           </CardContent>
         </Card>
       </div>
@@ -234,7 +228,7 @@ export function SimpleSlotMachine() {
                 <div>
                   <div className="text-xl font-bold">{lastResult.prize.name}</div>
                   <div className="text-sm text-gray-600">
-                    Value: {lastResult.prize.value > 0 ? `${Number(lastResult.prize.value) / 1e18} ETH` : 'Points Reward'}
+                    {lastResult.prize.value !== '0' ? `${lastResult.prize.value} Points` : 'Better luck next time!'}
                   </div>
                 </div>
               </div>
@@ -264,7 +258,7 @@ export function SimpleSlotMachine() {
                   <div className="flex-1">
                     <div className="font-bold">{prize.name}</div>
                     <div className="text-sm text-gray-600">
-                      {prize.value > 0 ? `${Number(prize.value) / 1e18} ETH` : 'Points Reward'}
+                      {prize.value !== '0' ? `${prize.value} Points` : 'Try again'}
                     </div>
                     <Badge variant="secondary" className="mt-1">
                       {prize.probability}% chance
@@ -293,7 +287,7 @@ export function SimpleSlotMachine() {
                       <div>
                         <div className="font-bold">{win.prize.name}</div>
                         <div className="text-sm text-gray-600">
-                          {win.prize.value > 0 ? `${Number(win.prize.value) / 1e18} ETH` : 'Points Reward'}
+                          {win.prize.value !== '0' ? `${win.prize.value} Points` : 'Try again'}
                         </div>
                       </div>
                     </div>
