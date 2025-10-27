@@ -6,8 +6,8 @@ A privacy-preserving lucky spin game using Fully Homomorphic Encryption (FHE) te
 
 - **Privacy Protection**: Uses FHE technology to keep spin results encrypted on-chain
 - **Fair & Transparent**: Ensures game fairness through FHE verification while protecting user privacy
-- **Daily Limits**: Maximum 3 spins per day per person to prevent excessive gaming
-- **Real-time Rewards**: Immediate prize claiming to wallet after winning
+- **Daily Limits**: Maximum 10 spins per day per address to maintain game balance
+- **Points Rewards**: Earn points (0-5000) with each spin, secured by FHE encryption
 
 ## 🏗️ Technical Architecture
 
@@ -18,11 +18,12 @@ A privacy-preserving lucky spin game using Fully Homomorphic Encryption (FHE) te
 - **Network**: Deployed on Sepolia testnet
 
 ### Frontend Application
-- **React 18**: Modern React application
+- **React 18**: Modern React application with hooks
 - **TypeScript**: Type-safe development experience
-- **Ant Design**: Beautiful UI component library
-- **Framer Motion**: Smooth animation effects
-- **Ethers.js**: Web3 interaction library
+- **Tailwind CSS + shadcn/ui**: Modern, customizable UI components
+- **Wagmi + Viem**: Type-safe Web3 React hooks
+- **RainbowKit**: Beautiful wallet connection UI
+- **Zama Relayer SDK**: FHE encryption client library
 
 ## 🚀 Quick Start
 
