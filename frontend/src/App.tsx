@@ -9,7 +9,6 @@ import { config } from './config/wagmi';
 import '@rainbow-me/rainbowkit/styles.css';
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import { DebugPanel } from "./components/DebugPanel";
 
 const queryClient = new QueryClient();
 
@@ -20,7 +19,6 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <DebugPanel />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
