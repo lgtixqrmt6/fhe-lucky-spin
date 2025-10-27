@@ -42,6 +42,29 @@ export function SimpleSlotMachine() {
   const [reels, setReels] = useState<number[]>([0, 0, 0]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [winHistory, setWinHistory] = useState<Array<{ prize: Prize; index: number; timestamp: number }>>([]);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Watch for transaction confirmation
+  useEffect(() => {
+    if (isConfirmed && selectedPrize !== null && prizes[selectedPrize]) {
+      // Show success modal after a short delay
+      setTimeout(() => {
+        setShowSuccessModal(true);
+
+        // Set final result
+        setReels([selectedPrize, selectedPrize, selectedPrize]);
+        const resultData = {
+          prize: prizes[selectedPrize],
+          index: selectedPrize,
+          timestamp: Date.now(),
+        };
+        setLastResult(resultData);
+
+        // Add to history
+        setWinHistory(prev => [resultData, ...prev].slice(0, 10));
+      }, 1000);
+    }
+  }, [isConfirmed, selectedPrize, prizes]);
 
   // Reel animation
   const animateReels = () => {
@@ -79,29 +102,10 @@ export function SimpleSlotMachine() {
     try {
       setIsSpinning(true);
       animateReels();
-
       await spin();
-
-      // Use selectedPrize from hook
-      if (selectedPrize !== null && prizes[selectedPrize]) {
-        // Set final result
-        setTimeout(() => {
-          setReels([selectedPrize, selectedPrize, selectedPrize]);
-          const resultData = {
-            prize: prizes[selectedPrize],
-            index: selectedPrize,
-            timestamp: Date.now(),
-          };
-          setLastResult(resultData);
-
-          // Add to history
-          setWinHistory(prev => [resultData, ...prev].slice(0, 10)); // Keep last 10
-        }, 2000);
-      }
     } catch (error) {
       console.error('Spin failed:', error);
       alert('Spin failed, please try again');
-    } finally {
       setIsSpinning(false);
     }
   };
@@ -308,6 +312,68 @@ export function SimpleSlotMachine() {
           <p>• All transactions are verified on-chain for transparency</p>
         </CardContent>
       </Card>
+
+      {/* Success Modal */}
+      {showSuccessModal && selectedPrize !== null && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-8 text-center animate-in fade-in zoom-in duration-300">
+            {/* Confetti/Celebration Emoji */}
+            <div className="text-6xl mb-4 animate-bounce">
+              🎉
+            </div>
+
+            {/* Success Title */}
+            <h2 className="text-3xl font-bold text-green-600 mb-2">
+              Congratulations!
+            </h2>
+
+            <p className="text-gray-600 mb-6">
+              Transaction confirmed on Sepolia!
+            </p>
+
+            {/* Prize Display */}
+            <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg p-6 mb-6">
+              <div className="text-5xl mb-3">
+                {PRIZE_EMOJIS[selectedPrize]}
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                {prizes[selectedPrize].name}
+              </h3>
+              {prizes[selectedPrize].value !== '0' && (
+                <p className="text-lg text-purple-600 font-semibold">
+                  {prizes[selectedPrize].value} Points
+                </p>
+              )}
+            </div>
+
+            {/* Transaction Hash */}
+            {txHash && (
+              <div className="mb-6 text-sm">
+                <p className="text-gray-500 mb-1">Transaction Hash:</p>
+                <a
+                  href={`https://sepolia.etherscan.io/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline break-all"
+                >
+                  {txHash.slice(0, 10)}...{txHash.slice(-8)}
+                </a>
+              </div>
+            )}
+
+            {/* Close Button */}
+            <Button
+              onClick={() => {
+                setShowSuccessModal(false);
+                setIsSpinning(false);
+              }}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            >
+              Awesome! 🎊
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
