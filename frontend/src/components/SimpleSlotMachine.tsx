@@ -243,42 +243,6 @@ export function SimpleSlotMachine() {
         </CardContent>
       </Card>
 
-      {/* Win History */}
-      {winHistory.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <History className="mr-2 h-5 w-5" />
-              Your Recent Wins
-            </CardTitle>
-            <CardDescription>Last {winHistory.length} prizes you won</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {winHistory.map((win, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3 rounded-lg border-2 border-gray-200 hover:border-purple-300 transition-colors"
-                >
-                  <div className="flex items-center space-x-3">
-                    <span className="text-2xl">{PRIZE_EMOJIS[win.index]}</span>
-                    <div>
-                      <div className="font-bold">{win.prize.name}</div>
-                      <div className="text-sm text-gray-600">
-                        {win.prize.value > 0 ? `${Number(win.prize.value) / 1e18} ETH` : 'Points Reward'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(win.timestamp).toLocaleTimeString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Prize List */}
       <Card>
         <CardHeader>
@@ -310,6 +274,37 @@ export function SimpleSlotMachine() {
               </div>
             ))}
           </div>
+
+          {/* Win History Section Inside Available Prizes */}
+          {winHistory.length > 0 && (
+            <div className="mt-6 pt-6 border-t-2 border-gray-200">
+              <div className="flex items-center mb-4">
+                <History className="mr-2 h-5 w-5 text-purple-600" />
+                <h3 className="text-lg font-bold">Your Recent Wins</h3>
+              </div>
+              <div className="space-y-3">
+                {winHistory.map((win, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">{PRIZE_EMOJIS[win.index]}</span>
+                      <div>
+                        <div className="font-bold">{win.prize.name}</div>
+                        <div className="text-sm text-gray-600">
+                          {win.prize.value > 0 ? `${Number(win.prize.value) / 1e18} ETH` : 'Points Reward'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(win.timestamp).toLocaleTimeString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
