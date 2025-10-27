@@ -11,7 +11,7 @@ export const CONTRACT_ADDRESSES = {
 } as const;
 
 export const LUCKY_SPIN_CONFIG = {
-  SPIN_COST: '0.01', // ETH
+  SPIN_COST: '0.05', // ETH
   MAX_DAILY_SPINS: 10,
   SEPOLIA_CHAIN_ID: Number(import.meta.env.VITE_SEPOLIA_CHAIN_ID) || 11155111,
 } as const;
