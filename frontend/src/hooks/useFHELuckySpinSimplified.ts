@@ -1,7 +1,7 @@
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { CONTRACT_ADDRESSES, LUCKY_SPIN_CONFIG, PRIZE_INFO } from '@/config/contracts';
-import FHELuckySpinV2ABI from '@/contracts/FHELuckySpinV2.json';
+import SimpleFHELuckySpinABI from '@/contracts/SimpleFHELuckySpin.json';
 import { useState, useCallback } from 'react';
 import { encryptUint8 } from '@/lib/fhe';
 
@@ -15,22 +15,15 @@ export function useFHELuckySpinSimplified() {
 
   // Read user data
   const { data: remainingSpins } = useReadContract({
-    address: CONTRACT_ADDRESSES.FHELuckySpinV2,
-    abi: FHELuckySpinV2ABI.abi,
+    address: CONTRACT_ADDRESSES.SimpleFHELuckySpin,
+    abi: SimpleFHELuckySpinABI.abi,
     functionName: 'getRemainingSpins',
     args: address ? [address] : undefined,
   });
 
-  const { data: userPoints } = useReadContract({
-    address: CONTRACT_ADDRESSES.FHELuckySpinV2,
-    abi: FHELuckySpinV2ABI.abi,
-    functionName: 'getUserPoints',
-    args: address ? [address] : undefined,
-  });
-
   const { data: userSpinCount } = useReadContract({
-    address: CONTRACT_ADDRESSES.FHELuckySpinV2,
-    abi: FHELuckySpinV2ABI.abi,
+    address: CONTRACT_ADDRESSES.SimpleFHELuckySpin,
+    abi: SimpleFHELuckySpinABI.abi,
     functionName: 'getUserSpinCount',
     args: address ? [address] : undefined,
   });
@@ -69,9 +62,9 @@ export function useFHELuckySpinSimplified() {
       console.log('🎰 [Spin] Selected prize:', PRIZE_INFO[prizeIndex].name, 'Index:', prizeIndex);
 
       // Encrypt prize index
-      const contractAddress = CONTRACT_ADDRESSES.FHELuckySpinV2;
+      const contractAddress = CONTRACT_ADDRESSES.SimpleFHELuckySpin;
       if (!contractAddress) {
-        throw new Error('FHELuckySpinV2 address not configured');
+        throw new Error('SimpleFHELuckySpin address not configured');
       }
 
       const provider = (window as any).ethereum;
@@ -82,12 +75,12 @@ export function useFHELuckySpinSimplified() {
 
       // Submit to contract with proper gas limit
       const txHash = await writeContractAsync({
-        address: CONTRACT_ADDRESSES.FHELuckySpinV2,
-        abi: FHELuckySpinV2ABI.abi,
+        address: CONTRACT_ADDRESSES.SimpleFHELuckySpin,
+        abi: SimpleFHELuckySpinABI.abi,
         functionName: 'spin',
         args: [encrypted.handle, encrypted.proof],
         value: parseEther(LUCKY_SPIN_CONFIG.SPIN_COST),
-        gas: BigInt(10000000), // Set gas limit to 10M (within Sepolia's 16.7M cap)
+        gas: BigInt(5000000), // Simplified contract needs less gas
       });
 
       console.log('✅ [Spin] Transaction submitted:', txHash);
@@ -102,7 +95,6 @@ export function useFHELuckySpinSimplified() {
   return {
     // User data
     remainingSpins: remainingSpins ? Number(remainingSpins) : 0,
-    userPoints: userPoints ? Number(userPoints) : 0,
     userSpinCount: userSpinCount ? Number(userSpinCount) : 0,
 
     // Selected prize
