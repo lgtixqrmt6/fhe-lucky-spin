@@ -80,13 +80,14 @@ export function useFHELuckySpinSimplified() {
 
       setIsEncrypting(false);
 
-      // Submit to contract
+      // Submit to contract with proper gas limit
       const txHash = await writeContractAsync({
         address: CONTRACT_ADDRESSES.FHELuckySpinV2,
         abi: FHELuckySpinV2ABI.abi,
         functionName: 'spin',
         args: [encrypted.handle, encrypted.proof],
         value: parseEther(LUCKY_SPIN_CONFIG.SPIN_COST),
+        gas: BigInt(10000000), // Set gas limit to 10M (within Sepolia's 16.7M cap)
       });
 
       console.log('✅ [Spin] Transaction submitted:', txHash);
