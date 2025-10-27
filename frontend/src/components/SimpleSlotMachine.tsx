@@ -21,7 +21,6 @@ export function SimpleSlotMachine() {
   const {
     remainingSpins,
     userSpinCount,
-    userPoints,
     spin,
     selectedPrize,
     isEncrypting,
@@ -118,12 +117,12 @@ export function SimpleSlotMachine() {
         </h1>
         <p className="text-gray-600 mt-2">Privacy-Preserving Blockchain Game</p>
         <p className="text-sm text-gray-500 mt-1">
-          Contract: {CONTRACT_ADDRESSES.FHELuckySpinV2.slice(0, 6)}...{CONTRACT_ADDRESSES.FHELuckySpinV2.slice(-4)}
+          Contract: {CONTRACT_ADDRESSES.SimpleFHELuckySpin.slice(0, 6)}...{CONTRACT_ADDRESSES.SimpleFHELuckySpin.slice(-4)}
         </p>
       </div>
 
       {/* Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Spins Left</CardTitle>
@@ -144,15 +143,6 @@ export function SimpleSlotMachine() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Points</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{userPoints}</div>
-            <p className="text-xs text-gray-500">Your points balance</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Slot Machine */}
