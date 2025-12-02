@@ -10,8 +10,8 @@ export function useFHELuckySpinSimplified() {
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [selectedPrize, setSelectedPrize] = useState<number | null>(null);
 
-  const { writeContractAsync, data: hash, isPending: isWritePending } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
+  const { writeContractAsync, data: hash, isPending: isWritePending, error: writeError } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed, isError: isTxError, error: txError } = useWaitForTransactionReceipt({ hash });
 
   // Read user data
   const { data: remainingSpins } = useReadContract({
@@ -109,6 +109,11 @@ export function useFHELuckySpinSimplified() {
     isWritePending,
     isConfirming,
     isConfirmed,
+
+    // Error states
+    isTxError,
+    txError,
+    writeError,
 
     // Transaction hash
     hash,
