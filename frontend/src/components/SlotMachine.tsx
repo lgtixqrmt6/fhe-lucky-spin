@@ -31,6 +31,8 @@ export const SlotMachine = () => {
     isWritePending,
     isConfirming,
     isConfirmed,
+    isTxError,
+    txError,
     txHash,
     refetchAll,
   } = useFHELuckySpin();
@@ -46,11 +48,20 @@ export const SlotMachine = () => {
   useEffect(() => {
     if (isConfirmed && txHash) {
       toastTxSuccess(txHash, "Spin completed! Check your history to claim prizes. 🎰");
+      setIsSpinning(false);
       setTimeout(() => {
         refetchAll();
       }, 2000);
     }
   }, [isConfirmed, txHash, refetchAll]);
+
+  // Handle transaction error (on-chain failure)
+  useEffect(() => {
+    if (isTxError && txHash) {
+      setIsSpinning(false);
+      toastTxError(txHash, txError?.message || 'Transaction failed on chain');
+    }
+  }, [isTxError, txHash, txError]);
 
   // Show encrypting toast
   useEffect(() => {
