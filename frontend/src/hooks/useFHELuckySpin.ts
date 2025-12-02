@@ -15,8 +15,8 @@ export interface SpinRecord {
 export function useFHELuckySpin() {
   const { address } = useAccount();
   const [isEncrypting, setIsEncrypting] = useState(false);
-  const { writeContractAsync, data: hash, isPending: isWritePending } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
+  const { writeContractAsync, data: hash, isPending: isWritePending, error: writeError } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed, isError: isTxError, error: txError } = useWaitForTransactionReceipt({ hash });
 
   // Read functions with auto-refresh
   const { data: remainingSpins, refetch: refetchRemainingSpins } = useReadContract({
@@ -245,6 +245,12 @@ export function useFHELuckySpin() {
     isWritePending,
     isConfirming,
     isConfirmed,
+
+    // Error states
+    isTxError,
+    txError,
+    writeError,
+
     txHash: hash,
 
     // Refetch function
