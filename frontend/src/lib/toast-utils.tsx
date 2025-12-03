@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { ExternalLink } from "lucide-react";
 
+// Sepolia block explorer URL
 const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io/tx";
 
 /**
