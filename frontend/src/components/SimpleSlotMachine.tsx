@@ -35,6 +35,8 @@ export function SimpleSlotMachine() {
     isWritePending,
     isConfirming,
     isConfirmed,
+    isTxError,
+    txError,
     hash: txHash,
   } = useFHELuckySpinSimplified();
 
@@ -51,6 +53,7 @@ export function SimpleSlotMachine() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [winHistory, setWinHistory] = useState<Array<{ prize: Prize; index: number; timestamp: number }>>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [processedTxHash, setProcessedTxHash] = useState<string | null>(null);
 
   // Show encrypting toast
   useEffect(() => {
@@ -70,9 +73,13 @@ export function SimpleSlotMachine() {
 
   // Watch for transaction confirmation
   useEffect(() => {
-    if (isConfirmed && selectedPrize !== null && prizes[selectedPrize] && txHash) {
+    // Only process if confirmed, has valid data, and hasn't been processed yet
+    if (isConfirmed && selectedPrize !== null && txHash && txHash !== processedTxHash) {
+      // Mark this transaction as processed
+      setProcessedTxHash(txHash);
+
       // Show success toast with transaction link
-      toastTxSuccess(txHash, `Won: ${prizes[selectedPrize].name} 🎉`);
+      toastTxSuccess(txHash, `Won: ${PRIZE_INFO[selectedPrize].name} 🎉`);
 
       // Show success modal after a short delay
       setTimeout(() => {
@@ -81,7 +88,11 @@ export function SimpleSlotMachine() {
         // Set final result
         setReels([selectedPrize, selectedPrize, selectedPrize]);
         const resultData = {
-          prize: prizes[selectedPrize],
+          prize: {
+            name: PRIZE_INFO[selectedPrize].name,
+            value: PRIZE_INFO[selectedPrize].value,
+            probability: PRIZE_INFO[selectedPrize].probability,
+          },
           index: selectedPrize,
           timestamp: Date.now(),
         };
@@ -89,9 +100,20 @@ export function SimpleSlotMachine() {
 
         // Add to history
         setWinHistory(prev => [resultData, ...prev].slice(0, 10));
+
+        // Reset spinning state
+        setIsSpinning(false);
       }, 1000);
     }
-  }, [isConfirmed, selectedPrize, prizes, txHash]);
+  }, [isConfirmed, selectedPrize, txHash, processedTxHash]);
+
+  // Watch for transaction error (on-chain failure)
+  useEffect(() => {
+    if (isTxError && txHash) {
+      setIsSpinning(false);
+      toastTxError(txHash, txError?.message || 'Transaction failed on chain');
+    }
+  }, [isTxError, txHash, txError]);
 
   // Reel animation
   const animateReels = () => {
