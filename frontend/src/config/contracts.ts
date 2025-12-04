@@ -13,6 +13,7 @@ export const LUCKY_SPIN_CONFIG = {
   SEPOLIA_CHAIN_ID: Number(import.meta.env.VITE_SEPOLIA_CHAIN_ID) || 11155111,
 } as const;
 
+// Prize tiers with probabilities (must sum to 100)
 export const PRIZE_INFO = [
   { name: 'Thank You', emoji: '🙏', value: '0', type: 'POINTS', probability: 40 },
   { name: '100 Points', emoji: '💎', value: '100', type: 'POINTS', probability: 30 },
