@@ -6,9 +6,10 @@ export const CONTRACT_ADDRESSES = {
   SimpleFHELuckySpin: (import.meta.env.VITE_SIMPLE_FHE_LUCKY_SPIN_ADDRESS || '0x064bc936B520902F1dbc7E9E9eA636aCF1B82128') as `0x${string}`,
 } as const;
 
+// Game configuration
 export const LUCKY_SPIN_CONFIG = {
-  SPIN_COST: '0.01', // ETH
-  MAX_DAILY_SPINS: 10,
+  SPIN_COST: '0.01', // ETH per spin
+  MAX_DAILY_SPINS: 10, // Maximum spins per day per address
   SEPOLIA_CHAIN_ID: Number(import.meta.env.VITE_SEPOLIA_CHAIN_ID) || 11155111,
 } as const;
 
