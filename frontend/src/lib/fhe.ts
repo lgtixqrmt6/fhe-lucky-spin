@@ -10,6 +10,7 @@ declare global {
     }
 }
 
+// FHE instance singleton
 let fheInstance: any = null;
 
 const getSDK = () => {
