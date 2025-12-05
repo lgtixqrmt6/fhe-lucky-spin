@@ -19,12 +19,14 @@
   },
   "keywords": [
     "fhe",
+    "fhevm",
     "lucky-spin",
     "spin-wheel",
     "ethereum",
     "smart-contracts",
     "zama",
-    "privacy"
+    "privacy",
+    "blockchain"
   ],
   "author": "",
   "license": "MIT",
