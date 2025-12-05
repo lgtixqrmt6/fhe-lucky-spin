@@ -2,7 +2,10 @@ require("@nomicfoundation/hardhat-toolbox");
 require("@fhevm/hardhat-plugin");
 require("dotenv").config();
 
-/** @type import('hardhat/config').HardhatUserConfig */
+/**
+ * Hardhat configuration for FHE Lucky Spin
+ * @type import('hardhat/config').HardhatUserConfig
+ */
 module.exports = {
   solidity: {
     version: "0.8.28",
