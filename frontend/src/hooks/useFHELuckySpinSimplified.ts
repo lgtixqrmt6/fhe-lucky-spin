@@ -1,3 +1,4 @@
+// Wagmi hooks for contract interaction
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { CONTRACT_ADDRESSES, LUCKY_SPIN_CONFIG, PRIZE_INFO } from '@/config/contracts';
