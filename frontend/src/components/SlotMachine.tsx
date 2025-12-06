@@ -1,3 +1,4 @@
+// SlotMachine - Advanced slot machine component with V2 contract
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
