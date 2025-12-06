@@ -1,3 +1,4 @@
+// SimpleSlotMachine - Main game component for FHE Lucky Spin
 import React, { useState, useEffect } from 'react';
 import { useFHELuckySpinSimplified } from '@/hooks/useFHELuckySpinSimplified';
 import { Button } from '@/components/ui/button';
