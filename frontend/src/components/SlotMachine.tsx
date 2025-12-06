@@ -6,6 +6,14 @@ import { useFHELuckySpin } from "@/hooks/useFHELuckySpin";
 import { useAccount } from "wagmi";
 import { toast } from "sonner";
 import { PRIZE_INFO, LUCKY_SPIN_CONFIG } from "@/config/contracts";
+import {
+  toastTxPending,
+  toastTxSuccess,
+  toastTxError,
+  toastUserRejected,
+  toastEncrypting,
+  dismissEncryptingToast,
+} from "@/lib/toast-utils";
 
 export const SlotMachine = () => {
   const { address } = useAccount();
@@ -23,18 +31,35 @@ export const SlotMachine = () => {
     isWritePending,
     isConfirming,
     isConfirmed,
+    txHash,
     refetchAll,
   } = useFHELuckySpin();
 
-  // Refetch data when transaction is confirmed
+  // Show pending toast when transaction is submitted
   useEffect(() => {
-    if (isConfirmed) {
+    if (txHash && isConfirming) {
+      toastTxPending(txHash);
+    }
+  }, [txHash, isConfirming]);
+
+  // Handle transaction confirmation
+  useEffect(() => {
+    if (isConfirmed && txHash) {
+      toastTxSuccess(txHash, "Spin completed! Check your history to claim prizes. 🎰");
       setTimeout(() => {
         refetchAll();
-        toast.success("Spin completed! Check your history to claim prizes.");
       }, 2000);
     }
-  }, [isConfirmed, refetchAll]);
+  }, [isConfirmed, txHash, refetchAll]);
+
+  // Show encrypting toast
+  useEffect(() => {
+    if (isEncrypting) {
+      toastEncrypting();
+    } else {
+      dismissEncryptingToast();
+    }
+  }, [isEncrypting]);
 
   const handleSpin = async () => {
     if (!address) {
@@ -50,11 +75,6 @@ export const SlotMachine = () => {
     try {
       setIsSpinning(true);
       setLastResult(null);
-
-      // Show signing prompt
-      toast.info("Please sign in your wallet to generate encryption keys", {
-        duration: 5000,
-      });
 
       // Animate reels spinning
       const spinDuration = 2500;
@@ -84,7 +104,13 @@ export const SlotMachine = () => {
     } catch (error: any) {
       setIsSpinning(false);
       console.error("Spin error:", error);
-      toast.error(error?.message || "Failed to spin. Please try again.");
+
+      // Handle specific error types
+      if (error?.message?.includes("User rejected") || error?.message?.includes("denied")) {
+        toastUserRejected();
+      } else {
+        toastTxError(txHash, error);
+      }
     }
   };
 

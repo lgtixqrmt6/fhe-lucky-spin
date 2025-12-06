@@ -3,7 +3,7 @@
  */
 
 export const CONTRACT_ADDRESSES = {
-  SimpleFHELuckySpin: (import.meta.env.VITE_SIMPLE_FHE_LUCKY_SPIN_ADDRESS || '0xab1cBA73bb5F16a6586a922840d01E0ae9C851Df') as `0x${string}`,
+  SimpleFHELuckySpin: (import.meta.env.VITE_SIMPLE_FHE_LUCKY_SPIN_ADDRESS || '0x064bc936B520902F1dbc7E9E9eA636aCF1B82128') as `0x${string}`,
 } as const;
 
 export const LUCKY_SPIN_CONFIG = {

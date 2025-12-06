@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin" />
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp" />
+    <link rel="preconnect" href="https://cdn.zama.org" />
     <title>FHE Lucky Spin - Privacy-Preserving Blockchain Game</title>
     <meta name="description" content="Play FHE Lucky Spin - A privacy-preserving blockchain game using Fully Homomorphic Encryption with fair results and instant payouts!" />
     <meta name="author" content="FHE Lucky Spin" />
@@ -19,8 +22,12 @@
 
   <body>
     <div id="root"></div>
-    <!-- FHE SDK CDN 预加载 -->
-    <script src="https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.umd.cjs" crossorigin="anonymous"></script>
+    <!-- FHE SDK CDN v0.3.0-5 -->
+    <script
+      src="https://cdn.zama.org/relayer-sdk-js/0.3.0-5/relayer-sdk-js.umd.cjs"
+      defer
+      crossorigin="anonymous"
+    ></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

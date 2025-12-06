@@ -7,6 +7,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Gift, Trophy, RotateCcw, History } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { PRIZE_INFO, CONTRACT_ADDRESSES } from '@/config/contracts';
+import {
+  toastTxPending,
+  toastTxSuccess,
+  toastTxError,
+  toastUserRejected,
+  toastEncrypting,
+  dismissEncryptingToast,
+} from '@/lib/toast-utils';
 
 const PRIZE_EMOJIS = ['🙏', '💎', '⭐', '💰', '🎁'];
 
@@ -44,9 +52,28 @@ export function SimpleSlotMachine() {
   const [winHistory, setWinHistory] = useState<Array<{ prize: Prize; index: number; timestamp: number }>>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  // Show encrypting toast
+  useEffect(() => {
+    if (isEncrypting) {
+      toastEncrypting();
+    } else {
+      dismissEncryptingToast();
+    }
+  }, [isEncrypting]);
+
+  // Show pending toast when transaction is submitted
+  useEffect(() => {
+    if (txHash && isConfirming) {
+      toastTxPending(txHash);
+    }
+  }, [txHash, isConfirming]);
+
   // Watch for transaction confirmation
   useEffect(() => {
-    if (isConfirmed && selectedPrize !== null && prizes[selectedPrize]) {
+    if (isConfirmed && selectedPrize !== null && prizes[selectedPrize] && txHash) {
+      // Show success toast with transaction link
+      toastTxSuccess(txHash, `Won: ${prizes[selectedPrize].name} 🎉`);
+
       // Show success modal after a short delay
       setTimeout(() => {
         setShowSuccessModal(true);
@@ -64,7 +91,7 @@ export function SimpleSlotMachine() {
         setWinHistory(prev => [resultData, ...prev].slice(0, 10));
       }, 1000);
     }
-  }, [isConfirmed, selectedPrize, prizes]);
+  }, [isConfirmed, selectedPrize, prizes, txHash]);
 
   // Reel animation
   const animateReels = () => {
@@ -90,12 +117,12 @@ export function SimpleSlotMachine() {
   // Handle spin
   const handleSpin = async () => {
     if (!address) {
-      alert('Please connect your wallet first');
+      toastTxError(undefined, 'Please connect your wallet first');
       return;
     }
 
     if (remainingSpins <= 0) {
-      alert('Daily spin limit reached!');
+      toastTxError(undefined, 'Daily spin limit reached!');
       return;
     }
 
@@ -103,10 +130,16 @@ export function SimpleSlotMachine() {
       setIsSpinning(true);
       animateReels();
       await spin();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Spin failed:', error);
-      alert('Spin failed, please try again');
       setIsSpinning(false);
+
+      // Handle specific error types
+      if (error?.message?.includes('User rejected') || error?.message?.includes('denied')) {
+        toastUserRejected();
+      } else {
+        toastTxError(txHash, error);
+      }
     }
   };
 
@@ -200,15 +233,6 @@ export function SimpleSlotMachine() {
                 {isWritePending && 'Submitting transaction to blockchain...'}
                 {isConfirming && 'Waiting for transaction confirmation...'}
                 {isSpinning && 'Spin in progress...'}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Transaction Hash */}
-          {txHash && (
-            <Alert>
-              <AlertDescription>
-                TX: {txHash.slice(0, 10)}...{txHash.slice(-10)}
               </AlertDescription>
             </Alert>
           )}

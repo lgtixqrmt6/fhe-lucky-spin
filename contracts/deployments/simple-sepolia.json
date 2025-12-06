@@ -1,0 +1,8 @@
+{
+  "network": "sepolia",
+  "deployer": "0x1796aA25b19B8Bb70A502f129eC640EBBbf1841E",
+  "timestamp": "2025-12-06T19:26:58.581Z",
+  "contracts": {
+    "SimpleFHELuckySpin": "0x064bc936B520902F1dbc7E9E9eA636aCF1B82128"
+  }
+}
