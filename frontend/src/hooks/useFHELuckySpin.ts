@@ -1,3 +1,4 @@
+// Wagmi hooks for FHE Lucky Spin V2 contract
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import { CONTRACT_ADDRESSES, LUCKY_SPIN_CONFIG } from '@/config/contracts';
